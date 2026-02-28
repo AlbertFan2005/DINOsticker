@@ -42,6 +42,22 @@
             cursor: pointer;
             border-radius: 5px;
         }
+        /* 倒數計時橫幅樣式 */
+        .countdown-container {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px 20px;
+            border-radius: 50px;
+            margin: 10px 0 20px 0;
+            border: 1px dashed #fff;
+            font-size: 1rem;
+            color: #ffeb3b; /* 亮黃色粉筆感 */
+            text-align: center;
+        }
+
+        #timer-text {
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
         #sticker-wall {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -75,7 +91,9 @@
 <body>
 
     <h1>Dino sticker</h1>
-
+    <div class="countdown-container">
+        ⏳ <span id="timer-text">計算中...</span>
+    </div>
     <div class="input-area">
         <textarea id="noteText" placeholder="跟Dino說話><"></textarea>
         <button onclick="postSticker()">發布</button>
@@ -111,40 +129,77 @@
         // *** 新增：在發布時就先抽好顏色 ***
         const randomColor = colors[Math.floor(Math.random() * colors.length)];
     
-    // *** 修改：將 color 一併推送到資料庫 ***
-    database.ref('stickers').push({
-        content: text,
-        date: timestamp,
-        color: randomColor // 把顏色存起來
-    });
+        // *** 修改：將 color 一併推送到資料庫 ***
+        database.ref('stickers').push({
+            content: text,
+            date: timestamp,
+            color: randomColor // 把顏色存起來
+          });
 
-    document.getElementById('noteText').value = ""; 
-}
+        document.getElementById('noteText').value = ""; 
+        }
 
         // 監聽資料庫變化並顯示貼紙（隨機顏色版）
-database.ref('stickers').on('value', (snapshot) => {
-    const wall = document.getElementById('sticker-wall');
-    wall.innerHTML = ""; 
+        database.ref('stickers').on('value', (snapshot) => {
+            const wall = document.getElementById('sticker-wall');
+            wall.innerHTML = ""; 
     
-    const data = snapshot.val();
-    if (data) {
-        const entries = Object.values(data).reverse(); 
-        entries.forEach(item => {
-            const div = document.createElement('div');
-            div.className = 'sticker';
+            const data = snapshot.val();
+            if (data) {
+                const entries = Object.values(data).reverse(); 
+                entries.forEach(item => {
+                    const div = document.createElement('div');
+                    div.className = 'sticker';
             
-            // *** 修改：直接使用資料庫存好的 item.color ***
-            // 如果是以前舊的貼紙沒有存顏色，就給它一個預設黃色 '#fff9c4'
-            div.style.backgroundColor = item.color || '#fff9c4'; 
+                    // *** 修改：直接使用資料庫存好的 item.color ***
+                    // 如果是以前舊的貼紙沒有存顏色，就給它一個預設黃色 '#fff9c4'
+                    div.style.backgroundColor = item.color || '#fff9c4'; 
             
-            div.innerHTML = `
-                <div class="content">${item.content}</div>
-                <div class="date">${item.date}</div>
-            `;
-            wall.appendChild(div);
+                    div.innerHTML = `
+                        <div class="content">${item.content}</div>
+                        <div class="date">${item.date}</div>
+                    `;
+                    wall.appendChild(div);
+                });
+            }
         });
-    }
-});
+        // 定義倒數目標 (名稱, 日期)
+        const targets = [
+            { name: "兒童節補假", date: "2026-04-03T00:00:00" },
+            { name: "清明節補假", date: "2026-04-06T00:00:00" },
+            { name: "期中考週", date: "2026-04-20T00:00:00" },
+            { name: "勞動節放假", date: "2026-05-01T00:00:00" },
+            { name: "端午節放假", date: "2026-06-19T00:00:00" },
+            { name: "期末考週", date: "2026-06-22T00:00:00" },
+        ];
+
+        function updateCountdown() {
+            const now = new Date().getTime();
+            let displayText = "";
+
+            // 這裡我們取最近的一個目標來顯示，或是你可以改成輪播
+            const nextTarget = targets.find(t => new Date(t.date).getTime() > now);
+
+            if (nextTarget) {
+                const targetTime = new Date(nextTarget.date).getTime();
+                const diff = targetTime - now;
+
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+        displayText = `離 ${nextTarget.name} 還有：${days}天 ${hours}時 ${mins}分 ${secs}秒`;
+            } else {
+            displayText = "目前沒有設定中的倒數目標！";
+            }
+
+        document.getElementById('timer-text').innerText = displayText;
+        }    
+
+        // 每秒更新一次
+        setInterval(updateCountdown, 1000);
+        updateCountdown(); // 初始執行一次
     </script>
 </body>
 </html>
