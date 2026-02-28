@@ -103,15 +103,23 @@
         const colors = ['#fff9c4', '#ffcdd2', '#f8bbd0', '#e1f5fe', '#d1c4e9', '#c8e6c9', '#ffe0b2'];
 
         function postSticker() {
-            const text = document.getElementById('noteText').value;
-            if (text.trim() === "") return alert("內容不能為空");
-            const timestamp = new Date().toLocaleString('zh-TW');
-            database.ref('stickers').push({
-                content: text,
-                date: timestamp
-            });
-            document.getElementById('noteText').value = "";
-        }
+        const text = document.getElementById('noteText').value;
+        if (text.trim() === "") return alert("內容不能為空");
+
+        const timestamp = new Date().toLocaleString('zh-TW');
+    
+        // *** 新增：在發布時就先抽好顏色 ***
+        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    
+    // *** 修改：將 color 一併推送到資料庫 ***
+    database.ref('stickers').push({
+        content: text,
+        date: timestamp,
+        color: randomColor // 把顏色存起來
+    });
+
+    document.getElementById('noteText').value = ""; 
+}
 
         // 監聽資料庫變化並顯示貼紙（隨機顏色版）
 database.ref('stickers').on('value', (snapshot) => {
@@ -120,17 +128,14 @@ database.ref('stickers').on('value', (snapshot) => {
     
     const data = snapshot.val();
     if (data) {
-        // 最新的貼紙排在最前面
         const entries = Object.values(data).reverse(); 
         entries.forEach(item => {
-            // 💡 這裡會從我們定義的 colors 陣列中隨機抽一個顏色
-            const randomColor = colors[Math.floor(Math.random() * colors.length)];
-            
             const div = document.createElement('div');
             div.className = 'sticker';
             
-            // 💡 關鍵：把隨機到的顏色設定給這張貼紙的背景
-            div.style.backgroundColor = randomColor; 
+            // *** 修改：直接使用資料庫存好的 item.color ***
+            // 如果是以前舊的貼紙沒有存顏色，就給它一個預設黃色 '#fff9c4'
+            div.style.backgroundColor = item.color || '#fff9c4'; 
             
             div.innerHTML = `
                 <div class="content">${item.content}</div>
