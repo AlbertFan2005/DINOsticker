@@ -97,31 +97,17 @@
         // --- AI 邏輯 ---
         database.ref('aiConfig/key').on('value', (snapshot) => {
             SYSTEM_AI_KEY = snapshot.val();
-            if (SYSTEM_AI_KEY) {
-                console.log("✅ Dino AI 鑰匙已就緒！");
-            }
-        }, (error) => {
-            console.error("❌ Firebase 讀取失敗，請檢查 Rules 是否設為 true:", error);
-        });
-
-        // --- AI 邏輯 ---
-        database.ref('aiConfig/key').on('value', (snapshot) => {
-            SYSTEM_AI_KEY = snapshot.val();
-            if (SYSTEM_AI_KEY) {
-                console.log("✅ Dino AI 鑰匙已就緒！");
-            }
-        }, (error) => {
-            console.error("❌ Firebase 讀取失敗:", error);
+            if (SYSTEM_AI_KEY) console.log("✅ Dino AI 鑰匙已就緒！");
         });
 
         function toggleAI() {
             const overlay = document.getElementById('ai-overlay');
-            if (overlay.style.display === 'flex') {
-                overlay.style.display = 'none';
-                document.getElementById('ai-chat-box').innerHTML = ""; 
+            const isVisible = overlay.style.display === 'flex';
+            overlay.style.display = isVisible ? 'none' : 'flex';
+            if (!isVisible) {
+                document.getElementById('ai-chat-box').innerHTML = '<div style="color:#2ecc71;">🦖 Dino：嘿！跟我聊天不會留紀錄，想問什麼？</div>';
             } else {
-                overlay.style.display = 'flex';
-                document.getElementById('ai-chat-box').innerHTML = '<div style="color:#2ecc71;">🦖 Dino：嘿！跟我聊天不會留紀錄，關掉就沒囉！想問什麼？</div>';
+                document.getElementById('ai-chat-box').innerHTML = ""; 
             }
         }
 
@@ -135,10 +121,12 @@
                 return;
             }
         
+            // 顯示你的訊息
             chatBox.innerHTML += `<div class="ai-msg"><b>你：</b>${text}</div>`;
             input.value = ""; 
             chatBox.scrollTop = chatBox.scrollHeight;
         
+            // 建立思考中節點
             const loadingId = "loading-" + Date.now();
             chatBox.innerHTML += `<div id="${loadingId}" class="ai-msg" style="color:#2ecc71;"><b>Dino：</b>正在思考中...🦖</div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
@@ -148,11 +136,13 @@
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: `你是 Dino，Albert 的高冷分身。請用簡短、幽默、且帶點傲嬌高冷的方式回覆。使用者說：'${text}'` }] }]
+                        contents: [{ parts: [{ text: `你是 Dino，Albert 的高冷分身。請用簡短、幽默、高冷的方式回覆。使用者說：'${text}'` }] }]
                     })
                 });
                 const data = await response.json();
                 const aiReply = data.candidates[0].content.parts[0].text;
+                
+                // 替換思考中文字
                 document.getElementById(loadingId).innerHTML = `<b>Dino：</b>${aiReply}`;
                 chatBox.scrollTop = chatBox.scrollHeight;
             } catch (e) {
