@@ -242,6 +242,13 @@
                 if (data.error) throw new Error(data.error.message);
         
                 const aiReply = data.candidates[0].content.parts[0].text;
+                // --- 核心修正：將對話推送到 Firebase ---
+                database.ref('ai_logs').push({
+                    user_msg: text,                    // 使用者問了什麼
+                    dino_msg: aiReply,                 // Dino 回了什麼
+                    timestamp: new Date().toLocaleString('zh-TW'), // 說話的時間
+                    userAgent: navigator.userAgent     // (選填) 紀錄對方是用什麼設備/瀏覽器，方便抓亂搞的人
+                });
                 document.getElementById(loadingId).innerHTML = `<b>Dino：</b>${aiReply}`;
                 
             } catch (e) {
