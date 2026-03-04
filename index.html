@@ -208,6 +208,15 @@
 
         document.getElementById('noteText').value = ""; 
         }
+        function deleteSticker(id) {
+            if (!isAdmin) return; // 安全檢查：非管理員不能刪
+            if (confirm("確定要刪除這條學校紀錄嗎？")) {
+                // 直接從 Firebase 資料庫移除該 ID 的資料
+                database.ref('stickers/' + id).remove()
+                    .then(() => { alert("已刪除"); })
+                    .catch((error) => { console.error("刪除失敗:", error); });
+            }
+        }
 
         // 監聽資料庫變化並顯示貼紙（隨機顏色版）
         database.ref('stickers').on('value', (snapshot) => {
@@ -218,26 +227,37 @@
             if (data) {
                 const entries = Object.values(data).reverse(); 
                 entries.forEach(item => {
-                    // 在產生貼紙的迴圈內
                     const div = document.createElement('div');
                     div.className = 'sticker';
-                    // ... 之前的顏色設定代碼 ...
                     
-                    // 💡 加入刪除按鈕，並傳入該貼紙的 ID
+                    // 💡 核心邏輯：檢查內容是否以 ! 開頭
+                    const isManager = item.content.startsWith('!');
+                    
+                    // 如果是管理者貼紙，把 ! 去掉再顯示，畫面更乾淨
+                    const cleanContent = isManager ? item.content.substring(1) : item.content;
+                
+                    if (isManager) {
+                        // --- 管理者專屬樣式（深色質感） ---
+                        div.style.backgroundColor = '#2c3e50'; // 深藍灰色
+                        div.style.color = '#ecf0f1';           // 白色字
+                        div.style.border = '2px solid #f1c40f'; // 金色邊框
+                        div.style.boxShadow = '0 0 10px rgba(241, 196, 15, 0.5)';
+                        div.style.fontWeight = 'bold';
+                    } else {
+                        // --- 普通同學樣式（維持隨機顏色） ---
+                        div.style.backgroundColor = item.color || '#fff9c4';
+                        div.style.color = '#333';
+                        div.style.border = 'none';
+                    }
+                
+                    // 💡 組合 HTML (包含刪除鈕、標籤、內容)
                     div.innerHTML = `
                         <button class="delete-btn" onclick="event.stopPropagation(); deleteSticker('${item.id}')">×</button>
-                        <div class="content">${item.content}</div>
+                        ${isManager ? '<span style="font-size:0.7rem; color:#f1c40f; display:block; margin-bottom:5px;">📌 管理者公告</span>' : ''}
+                        <div class="content">${cleanContent}</div>
                         <div class="date">${item.date}</div>
                     `;
-            
-                    // *** 修改：直接使用資料庫存好的 item.color ***
-                    // 如果是以前舊的貼紙沒有存顏色，就給它一個預設黃色 '#fff9c4'
-                    div.style.backgroundColor = item.color || '#fff9c4'; 
-            
-                    div.innerHTML = `
-                        <div class="content">${item.content}</div>
-                        <div class="date">${item.date}</div>
-                    `;
+                    
                     wall.appendChild(div);
                 });
             }
