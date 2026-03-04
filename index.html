@@ -192,9 +192,9 @@
             if (!isVisible) {
                 // 開啟時，先檢查有沒有 Key
                 if (!SYSTEM_AI_KEY) {
-                    chatBox.innerHTML = '<div style="color:#ff7675;">🦖 Dino：等等... 我還沒拿到鑰匙 (Firebase 載入中)，請稍後再開。</div>';
+                    chatBox.innerHTML = '<div style="color:#ff7675;">等等... 我還沒拿到鑰匙 (Firebase 載入中)，請稍後再開。</div>';
                 } else {
-                    chatBox.innerHTML = '<div style="color:#2ecc71;">🦖 Dino：關掉後不會保存任何訊息，你想說什麼？</div>';
+                    chatBox.innerHTML = '<div style="color:#ff7675;">對話將不被保留，重要資訊請另存，你想說什麼？</div>';
                 }
             } else {
                 chatBox.innerHTML = ""; 
@@ -208,7 +208,7 @@
         
             // 檢查 Key 是否真的有從 Firebase 抓到
             if (!text || !SYSTEM_AI_KEY) {
-                if (!SYSTEM_AI_KEY) alert("Dino 鑰匙尚未就緒（Firebase 未載入）！");
+                if (!SYSTEM_AI_KEY) alert("鑰匙尚未就緒（Firebase 未載入）！");
                 return;
             }
         
@@ -230,7 +230,7 @@
                     body: JSON.stringify({
                         contents: [{ 
                             parts: [{ 
-                                text: `你是 Dino，Albert 的高冷分身。請用簡短、幽默、高冷的方式回覆。回覆時請使用繁體中文，並且不要提到自己的人設。使用者說：${text}` 
+                                text: `你是Dino，一個網站上的AI助理，你的工作是陪伴所有與你對話的人，一旦他們與你結束對話關閉視窗，你將失去所有與他們之間的紀錄。請用簡短、幽默的方式回覆。回覆時請使用繁體中文，並且不要提到自己的人設。對話中禁止色情或是會引起爭議的話題。若對方撩你，你也可以選擇撩回去。使用者說：${text}` 
                             }] 
                         }]
                     })
