@@ -114,6 +114,28 @@
             flex-direction: column;
             justify-content: space-between;
         }
+        /* 管理模式下的貼紙樣式 */
+        .admin-mode .sticker {
+            border: 2px dashed #f1c40f !important; /* 虛線外框 */
+            cursor: move;
+        }
+        
+        .delete-btn {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            width: 25px;
+            height: 25px;
+            border: none;
+            display: none; /* 平時隱藏 */
+        }
+        
+        .admin-mode .delete-btn {
+            display: block; /* 管理模式下顯示 */
+        }
         .sticker:nth-child(even) { transform: rotate(1deg); }
         .content { font-size: 1.1rem; line-height: 1.5; word-break: break-all; }
         .date {
@@ -127,6 +149,12 @@
     </style>
 </head>
 <body>
+    <div style="position: fixed; top: 20px; left: 20px; z-index: 3000;">
+        <button id="admin-btn" onclick="checkAdmin()" style="background: rgba(0,0,0,0.5); border: 1px solid #fff; color: white; padding: 8px; border-radius: 5px; font-size: 14px;">
+            🔒 管理
+        </button>
+    </div>
+    
     <div class="dino-oracle">
         <button class="oracle-btn" onclick="dinoFortune()" title="想好問題再問我...">🦖</button>
         <div id="fortune-bubble"></div>
@@ -190,8 +218,17 @@
             if (data) {
                 const entries = Object.values(data).reverse(); 
                 entries.forEach(item => {
+                    // 在產生貼紙的迴圈內
                     const div = document.createElement('div');
                     div.className = 'sticker';
+                    // ... 之前的顏色設定代碼 ...
+                    
+                    // 💡 加入刪除按鈕，並傳入該貼紙的 ID
+                    div.innerHTML = `
+                        <button class="delete-btn" onclick="event.stopPropagation(); deleteSticker('${item.id}')">×</button>
+                        <div class="content">${item.content}</div>
+                        <div class="date">${item.date}</div>
+                    `;
             
                     // *** 修改：直接使用資料庫存好的 item.color ***
                     // 如果是以前舊的貼紙沒有存顏色，就給它一個預設黃色 '#fff9c4'
@@ -205,6 +242,37 @@
                 });
             }
         });
+
+        let isAdmin = false;
+        
+        function checkAdmin() {
+            if (!isAdmin) {
+                const password = prompt("請輸入管理者密碼：");
+                if (password === "asas1212") { // <--- 這裡設定你的專屬密碼
+                    isAdmin = true;
+                    document.body.classList.add('admin-mode');
+                    document.getElementById('admin-btn').innerText = "🔓 已授權";
+                    document.getElementById('admin-btn').style.backgroundColor = "#27ae60";
+                    alert("管理模式已啟動，現在可以刪除貼紙了。");
+                } else {
+                    alert("密碼錯誤！");
+                }
+            } else {
+                // 如果已經是管理員，再點一次就退出模式
+                isAdmin = false;
+                document.body.classList.remove('admin-mode');
+                document.getElementById('admin-btn').innerText = "🔒 管理";
+                document.getElementById('admin-btn').style.backgroundColor = "rgba(0,0,0,0.5)";
+            }
+        }
+        
+        // 刪除貼紙的函數
+        function deleteSticker(id) {
+            if (!isAdmin) return;
+            if (confirm("確定要刪除這張紀錄嗎？")) {
+                database.ref('stickers/' + id).remove();
+            }
+}
         // 定義倒數目標 (名稱, 日期)
         const targets = [
             { name: "兒童節補假", date: "2026-04-03T00:00:00" },
