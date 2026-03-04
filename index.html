@@ -222,37 +222,38 @@
         database.ref('stickers').on('value', (snapshot) => {
             const wall = document.getElementById('sticker-wall');
             wall.innerHTML = ""; 
-    
+        
             const data = snapshot.val();
             if (data) {
-                const entries = Object.values(data).reverse(); 
-                entries.forEach(item => {
+                // 💡 關鍵：改用 Object.keys 遍歷，這樣才能同時拿到 ID (key) 和 內容 (value)
+                const keys = Object.keys(data).reverse(); 
+        
+                keys.forEach(id => {
+                    const item = data[id];
                     const div = document.createElement('div');
                     div.className = 'sticker';
                     
                     // 💡 核心邏輯：檢查內容是否以 ! 開頭
                     const isManager = item.content.startsWith('!');
-                    
-                    // 如果是管理者貼紙，把 ! 去掉再顯示，畫面更乾淨
                     const cleanContent = isManager ? item.content.substring(1) : item.content;
                 
                     if (isManager) {
-                        // --- 管理者專屬樣式（深色質感） ---
-                        div.style.backgroundColor = '#2c3e50'; // 深藍灰色
-                        div.style.color = '#ecf0f1';           // 白色字
-                        div.style.border = '2px solid #f1c40f'; // 金色邊框
+                        // --- 管理者專屬樣式 ---
+                        div.style.backgroundColor = '#2c3e50'; 
+                        div.style.color = '#ecf0f1';           
+                        div.style.border = '2px solid #f1c40f'; 
                         div.style.boxShadow = '0 0 10px rgba(241, 196, 15, 0.5)';
                         div.style.fontWeight = 'bold';
                     } else {
-                        // --- 普通同學樣式（維持隨機顏色） ---
+                        // --- 普通同學樣式 ---
                         div.style.backgroundColor = item.color || '#fff9c4';
                         div.style.color = '#333';
                         div.style.border = 'none';
                     }
                 
-                    // 💡 組合 HTML (包含刪除鈕、標籤、內容)
+                    // 💡 重點：將 id 傳入 deleteSticker 函式
                     div.innerHTML = `
-                        <button class="delete-btn" onclick="event.stopPropagation(); deleteSticker('${item.id}')">×</button>
+                        <button class="delete-btn" onclick="event.stopPropagation(); deleteSticker('${id}')">×</button>
                         ${isManager ? '<span style="font-size:0.7rem; color:#f1c40f; display:block; margin-bottom:5px;">📌 管理者公告</span>' : ''}
                         <div class="content">${cleanContent}</div>
                         <div class="date">${item.date}</div>
@@ -286,13 +287,21 @@
             }
         }
         
-        // 刪除貼紙的函數
+        // 刪除貼紙的函數 (確保使用傳入的 id)
         function deleteSticker(id) {
             if (!isAdmin) return;
             if (confirm("確定要刪除這張紀錄嗎？")) {
-                database.ref('stickers/' + id).remove();
+                // 指向正確的節點進行移除
+                database.ref('stickers/' + id).remove()
+                    .then(() => {
+                        // 刪除後 Firebase 會自動觸發上面的 on('value')，畫面會立刻更新
+                        console.log("刪除成功");
+                    })
+                    .catch((error) => {
+                        alert("刪除失敗：" + error.message);
+                    });
             }
-}
+        }
         // 定義倒數目標 (名稱, 日期)
         const targets = [
             { name: "兒童節補假", date: "2026-04-03T00:00:00" },
