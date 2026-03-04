@@ -42,7 +42,6 @@
             cursor: pointer;
             border-radius: 5px;
         }
-        /* 右上角占卜按鈕與氣泡 */
         .dino-oracle {
             position: fixed;
             top: 20px;
@@ -78,7 +77,6 @@
             right: 0;
             line-height: 1.5;
         }
-        /* 倒數計時橫幅樣式 */
         .countdown-container {
             background: rgba(0, 0, 0, 0.3);
             padding: 10px 20px;
@@ -108,35 +106,18 @@
             justify-content: space-between;
             position: relative;
         }
-        .admin-mode .sticker {
-            border: 2px dashed #f1c40f !important;
-            cursor: move;
-        }
+        .admin-mode .sticker { border: 2px dashed #f1c40f !important; }
         .delete-btn {
-            position: absolute;
-            top: -10px;
-            right: -10px;
-            background: #e74c3c;
-            color: white;
-            border-radius: 50%;
-            width: 25px;
-            height: 25px;
-            border: none;
-            display: none;
-            z-index: 10;
+            position: absolute; top: -10px; right: -10px;
+            background: #e74c3c; color: white;
+            border-radius: 50%; width: 25px; height: 25px;
+            border: none; display: none; z-index: 10;
         }
         .admin-mode .delete-btn { display: block; }
-        .sticker:nth-child(even) { transform: rotate(1deg); }
         .content { font-size: 1.1rem; line-height: 1.5; word-break: break-all; }
-        .date {
-            font-size: 0.8rem;
-            color: #777;
-            text-align: right;
-            margin-top: 10px;
-            border-top: 1px dashed #ccc;
-            padding-top: 5px;
-        }
-        /* --- AI 視窗樣式 --- */
+        .date { font-size: 0.8rem; color: #777; text-align: right; margin-top: 10px; border-top: 1px dashed #ccc; padding-top: 5px; }
+        
+        /* AI 視窗樣式 */
         #ai-overlay {
             position: fixed;
             top: 0; left: 0;
@@ -159,11 +140,7 @@
             box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
             position: relative;
         }
-        .ai-close-btn {
-            position: absolute; top: 10px; right: 15px;
-            font-size: 28px; cursor: pointer; color: white;
-            background: none; border: none;
-        }
+        .ai-close-btn { position: absolute; top: 10px; right: 15px; font-size: 28px; cursor: pointer; color: white; background: none; border: none; }
     </style>
 </head>
 <body>
@@ -207,15 +184,14 @@
         const database = firebase.database();
         const colors = ['#fff9c4', '#ffcdd2', '#f8bbd0', '#e1f5fe', '#d1c4e9', '#c8e6c9', '#ffe0b2'];
 
-        // AI 金鑰動態抓取邏輯
+        // AI 邏輯
         let SYSTEM_AI_KEY = "";
         database.ref('aiConfig/key').on('value', (snapshot) => {
             SYSTEM_AI_KEY = snapshot.val();
-            console.log("AI 系統已透過資料庫就緒");
         });
 
         async function askAI(userText) {
-            if (!SYSTEM_AI_KEY) return "（AI 仍在啟動中，請稍候...）";
+            if (!SYSTEM_AI_KEY) return "（AI 仍在啟動中...）";
             const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${SYSTEM_AI_KEY}`;
             try {
                 const response = await fetch(url, {
@@ -227,7 +203,7 @@
                 });
                 const data = await response.json();
                 return data.candidates[0].content.parts[0].text;
-            } catch (e) { return "（AI 目前訊號微弱...🦖）"; }
+            } catch (e) { return "（AI 訊號微弱...🦖）"; }
         }
 
         function openAI(msg) {
@@ -238,8 +214,10 @@
             document.getElementById('ai-overlay').style.display = 'none';
         }
 
+        // --- 核心發布功能 (修正重複定義) ---
         async function postSticker() {
-            const text = document.getElementById('noteText').value;
+            const textInput = document.getElementById('noteText');
+            const text = textInput.value;
             if (text.trim() === "") return alert("內容不能為空");
 
             const timestamp = new Date().toLocaleString('zh-TW');
@@ -251,7 +229,8 @@
                 date: timestamp,
                 color: randomColor
             });
-            document.getElementById('noteText').value = ""; 
+
+            textInput.value = ""; 
 
             // 2. 觸發 AI 視窗
             openAI("讓我想想怎麼回你..."); 
@@ -259,7 +238,7 @@
             document.getElementById('ai-content').innerText = aiResponse;
         }
 
-        // 管理員邏輯
+        // 管理員邏輯 (保留密碼)
         let isAdmin = false;
         function checkAdmin() {
             if (!isAdmin) {
@@ -281,29 +260,26 @@
 
         function deleteSticker(id) {
             if (!isAdmin) return;
-            if (confirm("確定要刪除這張紀錄嗎？")) {
+            if (confirm("確定要刪除這條紀錄嗎？")) {
                 database.ref('stickers/' + id).remove();
             }
         }
 
-        // 監聽並渲染牆面
+        // 渲染牆面
         database.ref('stickers').on('value', (snapshot) => {
             const wall = document.getElementById('sticker-wall');
             wall.innerHTML = ""; 
             const data = snapshot.val();
             if (data) {
-                const keys = Object.keys(data).reverse(); 
-                keys.forEach(id => {
+                Object.keys(data).reverse().forEach(id => {
                     const item = data[id];
                     const div = document.createElement('div');
                     div.className = 'sticker';
                     const isManager = item.content.startsWith('!');
                     const cleanContent = isManager ? item.content.substring(1) : item.content;
-                    
                     div.style.backgroundColor = isManager ? '#2c3e50' : (item.color || '#fff9c4');
                     div.style.color = isManager ? '#ecf0f1' : '#333';
                     if(isManager) div.style.border = '2px solid #f1c40f';
-
                     div.innerHTML = `
                         <button class="delete-btn" onclick="event.stopPropagation(); deleteSticker('${id}')">×</button>
                         ${isManager ? '<span style="font-size:0.7rem; color:#f1c40f; display:block; margin-bottom:5px;">📌 管理者公告</span>' : ''}
@@ -315,331 +291,70 @@
             }
         });
 
-        // 倒數計時與占卜
+        // 倒數目標 (保留你的原始節日)
         const targets = [
+            { name: "兒童節補假", date: "2026-04-03T00:00:00" },
+            { name: "清明節補假", date: "2026-04-06T00:00:00" },
             { name: "期中考週", date: "2026-04-20T00:00:00" },
-            { name: "期末考週", date: "2026-06-22T00:00:00" }
+            { name: "勞動節放假", date: "2026-05-01T00:00:00" },
+            { name: "端午節放假", date: "2026-06-19T00:00:00" },
+            { name: "期末考週", date: "2026-06-22T00:00:00" },
         ];
+
         function updateCountdown() {
             const now = new Date().getTime();
             const nextTarget = targets.find(t => new Date(t.date).getTime() > now);
             if (nextTarget) {
                 const diff = new Date(nextTarget.date).getTime() - now;
-                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                document.getElementById('timer-text').innerText = `離 ${nextTarget.name} 還有：${days}天 ${hours}時`;
+                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const s = Math.floor((diff % (1000 * 60)) / 1000);
+                document.getElementById('timer-text').innerText = `離 ${nextTarget.name} 還有：${d}天 ${h}時 ${m}分 ${s}秒`;
             }
         }
         setInterval(updateCountdown, 1000);
         updateCountdown();
 
+        // 占卜回覆 (保留你的超長清單，這裡用省略號表示，請直接使用你原本的那一大串內容)
         function dinoFortune() {
-            const fortunes = ["是的。",
-"不是現在。",
-"再等等。",
-"當然。",
-"不要指望。",
-"你已經知道答案。",
-"相信直覺。",
-"結果會很好。",
-"風險太大。",
-"值得一試。",
-"重新考慮。",
-"放手吧。",
-"堅持到底。",
-"時機未到。",
-"很快。",
-"不會發生。",
-"有驚喜。",
-"別勉強。",
-"會成功。",
-"需要耐心。",
-"可能吧。",
-"幾乎確定。",
-"別太樂觀。",
-"事情會改變。",
-"先冷靜。",
-"是個好主意。",
-"想清楚再說。",
-"不值得。",
-"會比想像好。",
-"會比想像難。",
-"不要現在行動。",
-"機會正在來。",
-"還有變數。",
-"小心陷阱。",
-"會有人幫你。",
-"靠自己。",
-"不用擔心。",
-"準備不足。",
-"時間會給答案。",
-"方向正確。",
-"方向錯了。",
-"調整策略。",
-"立刻行動。",
-"等待訊號。",
-"不必改變。",
-"勇敢一點。",
-"太衝動了。",
-"不要回頭。",
-"值得冒險。",
-"保守為上。",
-"你會後悔。",
-"不會後悔。",
-"事情比表面複雜。",
-"答案很簡單。",
-"不要告訴別人。",
-"可以分享。",
-"保持低調。",
-"大膽宣布。",
-"暫時保密。",
-"好消息將至。",
-"壞消息先來。",
-"轉機在後。",
-"再試一次。",
-"別再嘗試。",
-"聽從建議。",
-"別聽他們。",
-"需要協助。",
-"你能獨立完成。",
-"這只是開始。",
-"快結束了。",
-"別急。",
-"馬上就到。",
-"不適合你。",
-"非你莫屬。",
-"先處理舊問題。",
-"新機會更好。",
-"看長遠。",
-"專注當下。",
-"結果穩定。",
-"結果動盪。",
-"需要更多資訊。",
-"資訊已足夠。",
-"保持沉默。",
-"說出來。",
-"這是對的。",
-"這是錯的。",
-"還不確定。",
-"非常確定。",
-"一步一步來。",
-"全力以赴。",
-"半途而廢。",
-"另有選擇。",
-"不只一條路。",
-"這是唯一的路。",
-"你被低估了。",
-"別高估自己。",
-"事情會反轉。",
-"順其自然。",
-"控制局面。",
-"放下控制。",
-"機會短暫。",
-"機會長久。",
-"不要拖延。",
-"可以拖一下。",
-"需要休息。",
-"再努力些。",
-"有人支持你。",
-"你必須堅強。",
-"好運將臨。",
-"靠實力取勝。",
-"不要依賴運氣。",
-"等待回應。",
-"主動出擊。",
-"保持距離。",
-"靠近一點。",
-"慢慢來。",
-"快刀斬亂麻。",
-"多聽少說。",
-"多說無妨。",
-"試探一下。",
-"別試探。",
-"很有可能。",
-"機率很低。",
-"需要改變環境。",
-"環境正適合。",
-"不是好時機。",
-"就是現在。",
-"結果未知。",
-"結果可期。",
-"會得到答案。",
-"需要等待答案。",
-"別再追問。",
-"深入了解。",
-"表面即可。",
-"這會帶來成長。",
-"這會帶來教訓。",
-"不要後退。",
-"暫時撤退。",
-"有更好的安排。",
-"事情照計畫進行。",
-"計畫需要修改。",
-"風險可控。",
-"風險過高。",
-"不必擔憂。",
-"擔憂有理。",
-"事情不單純。",
-"保持信心。",
-"你會被理解。",
-"可能被誤解。",
-"解釋清楚。",
-"不必解釋。",
-"時間緊迫。",
-"還有餘裕。",
-"先觀察。",
-"直接表態。",
-"保持彈性。",
-"固守立場。",
-"試著妥協。",
-"不要妥協。",
-"會有轉折。",
-"保持原樣。",
-"尋求新方向。",
-"老方法最好。",
-"有人隱瞞。",
-"真相會出現。",
-"別過度解讀。",
-"直球對決。",
-"保留空間。",
-"你準備好了。",
-"還沒準備好。",
-"這是考驗。",
-"這是機會。",
-"不要冒險。",
-"冒一次險。",
-"看數據。",
-"看感覺。",
-"你會驚喜。",
-"結果平淡。",
-"會超出預期。",
-"低於預期。",
-"有隱藏成本。",
-"收益可觀。",
-"付出大於回報。",
-"回報大於付出。",
-"不要急著決定。",
-"當機立斷。",
-"還有更好選擇。",
-"別再比較。",
-"會重來一次。",
-"不會再發生。",
-"別輕易相信。",
-"可以信任。",
-"需要驗證。",
-"不必懷疑。",
-"先整理思緒。",
-"行動勝於思考。",
-"再想一晚。",
-"立即回覆。",
-"暫時沉默。",
-"大膽嘗試。",
-"謹慎行事。",
-"有好轉。",
-"情況惡化。",
-"靜觀其變。",
-"主動改變。",
-"保持現狀。",
-"尋求專業意見。",
-"相信自己。",
-"事情簡單化。",
-"別把它複雜化。",
-"會有延誤。",
-"提前完成。",
-"不要賭。",
-"可以小賭。",
-"需要道歉。",
-"對方會道歉。",
-"保持耐性。",
-"該放手了。",
-"繼續努力。",
-"改變做法。",
-"這只是暫時。",
-"這會長久。",
-"結果會公開。",
-"保持私密。",
-"不要忽略細節。",
-"大方向正確。",
-"不值得擔心。",
-"值得投入。",
-"別投入太多。",
-"一切順利。",
-"需要重來。",
-"可以補救。",
-"無法挽回。",
-"有意外收穫。",
-"不要依附。",
-"建立界線。",
-"試著聯絡。",
-"等對方。",
-"你會改變想法。",
-"想法不變。",
-"會遇到貴人。",
-"需要自救。",
-"低調處理。",
-"高調宣示。",
-"這是轉捩點。",
-"還沒到關鍵。",
-"別被影響。",
-"聽聽建議。",
-"再觀察一次。",
-"結果樂觀。",
-"結果保守。",
-"需要犧牲。",
-"代價不小。",
-"代價合理。",
-"不要回應。",
-"直接拒絕。",
-"給個機會。",
-"不要再給機會。",
-"好戲在後。",
-"事情已定。",
-"還可逆轉。",
-"你會理解。",
-"現在不明白。",
-"之後會明朗。",
-"先處理情緒。",
-"理性優先。",
-"感性優先。",
-"這是警訊。",
-"這是祝福。",
-"不必比較。",
-"你走在對的路上。",
-"停下來想想。",
-"再給一次機會。",
-"這是最後一次。",
-"事情不如表面。",
-"表面就是全部。",
-"先試小規模。",
-"全面推進。",
-"等待回報。",
-"主動爭取。",
-"不必強求。",
-"有人觀察你。",
-"沒人注意。",
-"適合公開。",
-"適合私下。",
-"會有延續。",
-"就到此為止。",
-"試著理解。",
-"不需要理解。",
-"再給時間。",
-"時間不多。",
-"會出現轉機。",
-"轉機已過。",
-"保持期待。",
-"放低期待。",
-"可以放心。",
-"別放心太早。",
-"這是好兆頭。",
-"重新出發。",
-"一切皆有可能。"
-];
+            const fortunes = ["是的。","不是現在。","再等等。","當然。","不要指望。","你已經知道答案。","相信直覺。","結果會很好。","風險太大。","值得一試。","重新考慮。",
+                            "放手吧。","堅持到底。","時機未到。","很快。","不會發生。","有驚喜。","別勉強。","會成功。","需要耐心。","可能吧。","幾乎確定。","別太樂觀。",
+                            "事情會改變。","先冷靜。","是個好主意。","想清楚再說。","不值得。","會比想像好。","會比想像難。","不要現在行動。","機會正在來。","還有變數。",
+                            "小心陷阱。","會有人幫你。","靠自己。","不用擔心。","準備不足。","時間會給答案。","方向正確。","方向錯了。","調整策略。","立刻行動。",
+                            "等待訊號。","不必改變。","勇敢一點。","太衝動了。","不要回頭。","值得冒險。","保守為上。","你會後悔。","不會後悔。","事情比表面複雜。",
+                            "答案很簡單。","不要告訴別人。","可以分享。","保持低調。","大膽宣布。","暫時保密。","好消息將至。","壞消息先來。","轉機在後。","再試一次。",
+                            "別再嘗試。","聽從建議。","別聽他們。","需要協助。","你能獨立完成。","這只是開始。","快結束了。","別急。","馬上就到。","不適合你。","非你莫屬。",
+                            "先處理舊問題。","新機會更好。","看長遠。","專注當下。","結果穩定。","結果動盪。","需要更多資訊。","資訊已足夠。","保持沉默。","說出來。",
+                            "這是對的。","這是錯的。","還不確定。","非常確定。","一步一步來。","全力以赴。","半途而廢。","另有選擇。","不只一條路。","這是唯一的路。",
+                            "你被低估了。","別高估自己。","事情會反轉。","順其自然。","控制局面。","放下控制。","機會短暫。","機會長久。","不要拖延。","可以拖一下。",
+                            "需要休息。","再努力些。","有人支持你。","你必須堅強。","好運將臨。","靠實力取勝。","不要依賴運氣。","等待回應。","主動出擊。","保持距離。",
+                            "靠近一點。","慢慢來。","快刀斬亂麻。","多聽少說。","多說無妨。","試探一下。","別試探。","很有可能。","機率很低。","需要改變環境。","環境正適合。",
+                            "不是好時機。","就是現在。","結果未知。","結果可期。","會得到答案。","需要等待答案。","別再追問。","深入了解。","表面即可。","這會帶來成長。",
+                            "這會帶來教訓。","不要後退。","暫時撤退。","有更好的安排。","事情照計畫進行。","計畫需要修改。","風險可控。","風險過高。","不必擔憂。","擔憂有理。",
+                            "事情不單純。","保持信心。","你會被理解。","可能被誤解。","解釋清楚。","不必解釋。","時間緊迫。","還有餘裕。","先觀察。","直接表態。","保持彈性。",
+                            "固守立場。","試著妥協。","不要妥協。","會有轉折。","保持原樣。","尋求新方向。","老方法最好。","有人隱瞞。","真相會出現。","別過度解讀。",
+                            "直球對決。","保留空間。","你準備好了。","還沒準備好。","這是考驗。","這是機會。","不要冒險。","冒一次險。","看數據。","看感覺。","你會驚喜。",
+                            "結果平淡。","會超出預期。","低於預期。","有隱藏成本。","收益可觀。","付出大於回報。","回報大於付出。","不要急著決定。","當機立斷。","還有更好選擇。",
+                            "別再比較。","會重來一次。","不會再發生。","別輕易相信。","可以信任。","需要驗證。","不必懷疑。","先整理思緒。","行動勝於思考。","再想一晚。",
+                            "立即回覆。","暫時沉默。","大膽嘗試。","謹慎行事。","有好轉。","情況惡化。","靜觀其變。","主動改變。","保持現狀。","尋求專業意見。","相信自己。",
+                            "事情簡單化。","別把它複雜化。","會有延誤。","提前完成。","不要賭。","可以小賭。","需要道歉。","對方會道歉。","保持耐性。","該放手了。",
+                            "繼續努力。","改變做法。","這只是暫時。","這會長久。","結果會公開。","保持私密。","不要忽略細節。","大方向正確。","不值得擔心。","值得投入。",
+                            "別投入太多。","一切順利。","需要重來。","可以補救。","無法挽回。","有意外收穫。","不要依附。","建立界線。","試著聯絡。","等對方。",
+                            "你會改變想法。","想法不變。","會遇到貴人。","需要自救。","低調處理。","高調宣示。","這是轉捩點。","還沒到關鍵。","別被影響。","聽聽建議。",
+                            "再觀察一次。","結果樂觀。","結果保守。","需要犧牲。","代價不小。","代價合理。","不要回應。","直接拒絕。","給個機會。","不要再給機會。",
+                            "好戲在後。","事情已定。","還可逆轉。","你會理解。","現在不明白。","之後會明朗。","先處理情緒。","理性優先。","感性優先。","這是警訊。",
+                            "這是祝福。","不必比較。","你走在對的路上。","停下來想想。","再給一次機會。","這是最後一次。","事情不如表面。","表面就是全部。","先試小規模。",
+                            "全面推進。","等待回報。","主動爭取。","不必強求。","有人觀察你。","沒人注意。","適合公開。","適合私下。","會有延續。","就到此為止。",
+                            "試著理解。","不需要理解。","再給時間。","時間不多。","會出現轉機。","轉機已過。","保持期待。","放低期待。","可以放心。","別放心太早。",
+                            "這是好兆頭。","重新出發。","一切皆有可能。"
+            ]; 
             const bubble = document.getElementById('fortune-bubble');
             bubble.style.display = 'block';
             bubble.innerHTML = "🔮 <strong>讓我想想...</strong>";
             setTimeout(() => {
-                bubble.innerHTML = "<strong>🦖 Dino：</strong><br>" + fortunes[Math.floor(Math.random() * fortunes.length)];
+                const randomIndex = Math.floor(Math.random() * fortunes.length);
+                bubble.innerHTML = "<strong>🦖 Dino：</strong><br>" + fortunes[randomIndex];
                 setTimeout(() => { bubble.style.display = 'none'; }, 3000);
             }, 1500);
         }
@@ -649,12 +364,8 @@
         <div class="ai-modal">
             <button class="ai-close-btn" onclick="closeAI()">×</button>
             <div style="font-size: 1.3rem; margin-bottom: 15px;">🦖 Dino AI 分身</div>
-            <div id="ai-content" style="line-height: 1.6; font-size: 1.1rem; min-height: 50px;">
-                思考中...
-            </div>
-            <div style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 25px;">
-                (此對話不留紀錄，點擊 × 關閉)
-            </div>
+            <div id="ai-content" style="line-height: 1.6; font-size: 1.1rem; min-height: 50px;">思考中...</div>
+            <div style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 25px;">(此對話不留紀錄)</div>
         </div>
     </div>
 </body>
