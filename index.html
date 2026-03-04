@@ -102,12 +102,20 @@
 
         function toggleAI() {
             const overlay = document.getElementById('ai-overlay');
+            const chatBox = document.getElementById('ai-chat-box');
             const isVisible = overlay.style.display === 'flex';
+            
             overlay.style.display = isVisible ? 'none' : 'flex';
+            
             if (!isVisible) {
-                document.getElementById('ai-chat-box').innerHTML = '<div style="color:#2ecc71;">🦖 Dino：嘿！跟我聊天不會留紀錄，想問什麼？</div>';
+                // 開啟時，先檢查有沒有 Key
+                if (!SYSTEM_AI_KEY) {
+                    chatBox.innerHTML = '<div style="color:#ff7675;">🦖 Dino：等等... 我還沒拿到鑰匙 (Firebase 載入中)，請稍後再開。</div>';
+                } else {
+                    chatBox.innerHTML = '<div style="color:#2ecc71;">🦖 Dino：嘿！跟我聊天不會留紀錄，想問什麼？</div>';
+                }
             } else {
-                document.getElementById('ai-chat-box').innerHTML = ""; 
+                chatBox.innerHTML = ""; 
             }
         }
 
