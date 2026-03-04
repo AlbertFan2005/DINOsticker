@@ -146,6 +146,34 @@
             border-top: 1px dashed #ccc;
             padding-top: 5px;
         }
+        /* --- AI 視窗樣式 --- */
+        #ai-overlay {
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6); /* 半透明黑底 */
+            backdrop-filter: blur(10px);    /* 磨砂玻璃模糊 */
+            display: none;                /* 預設隱藏 */
+            justify-content: center;
+            align-items: center;
+            z-index: 5000;
+        }
+        .ai-modal {
+            background: rgba(255, 255, 255, 0.15); 
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            padding: 30px;
+            border-radius: 20px;
+            width: 85%; max-width: 400px;
+            color: white;
+            text-align: center;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+        .ai-close-btn {
+            position: absolute; top: 10px; right: 15px;
+            font-size: 28px; cursor: pointer; color: white;
+            background: none; border: none;
+        }
     </style>
 </head>
 <body>
@@ -190,9 +218,53 @@
         const database = firebase.database();
         const colors = ['#fff9c4', '#ffcdd2', '#f8bbd0', '#e1f5fe', '#d1c4e9', '#c8e6c9', '#ffe0b2'];
 
-        function postSticker() {
-        const text = document.getElementById('noteText').value;
-        if (text.trim() === "") return alert("內容不能為空");
+        // 💡 請在這裡填入你申請到的 API Key
+        const GEMINI_API_KEY = "AIzaSyA07_LtP_uRPF7EOUGGngJ6-VsCTx8fg6g"; 
+        
+        // 💡 這裡是跟 AI 連線的函式
+        async function askAI(userText) {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+            try {
+                const response = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: `你現在是 Albert 的數位分身，請針對這句話給一個簡短、幽默且像老大的回覆：'${userText}'` }] }]
+                    })
+                });
+                const data = await response.json();
+                return data.candidates[0].content.parts[0].text;
+            } catch (e) { return "（AI 目前訊號微弱...🦖）"; }
+        }
+        
+        // 💡 控制 AI 視窗開關的函式
+        function openAI(msg) {
+            document.getElementById('ai-content').innerText = msg;
+            document.getElementById('ai-overlay').style.display = 'flex';
+        }
+        function closeAI() {
+            document.getElementById('ai-overlay').style.display = 'none';
+        }
+        
+        // 💡 修改後的發布功能
+        async function postSticker() {
+            const text = document.getElementById('noteText').value;
+            if (text.trim() === "") return alert("內容不能為空");
+        
+            // 1. 存入 Firebase (原本的邏輯)
+            const timestamp = new Date().toLocaleString('zh-TW');
+            database.ref('stickers').push({
+                content: text,
+                date: timestamp,
+                color: colors[Math.floor(Math.random() * colors.length)]
+            });
+            document.getElementById('noteText').value = ""; 
+        
+            // 2. 💡 觸發 AI 視窗
+            openAI("讓我想想怎麼回你..."); 
+            const aiResponse = await askAI(text);
+            document.getElementById('ai-content').innerText = aiResponse;
+        }
 
         const timestamp = new Date().toLocaleString('zh-TW');
     
@@ -667,5 +739,18 @@
         }, 1500); 
     }
     </script>
+    
+    <div id="ai-overlay">
+        <div class="ai-modal">
+            <button class="ai-close-btn" onclick="closeAI()">×</button>
+            <div style="font-size: 1.3rem; margin-bottom: 15px;">🦖 Dino AI 分身</div>
+            <div id="ai-content" style="line-height: 1.6; font-size: 1.1rem; min-height: 50px;">
+                思考中...
+            </div>
+            <div style="font-size: 0.7rem; color: rgba(255,255,255,0.5); margin-top: 25px;">
+                (此對話不留紀錄，點擊 × 關閉)
+            </div>
+        </div>
+    </div>
 </body>
 </html>
