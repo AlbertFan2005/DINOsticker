@@ -49,12 +49,11 @@
             right: 20px;
             z-index: 2000;
         }
-
         .oracle-btn {
             background-color: #2ecc71;
             border: 3px solid #fff;
             border-radius: 50%;
-            width: 65px;  /* 針對手機指尖大小設計 */
+            width: 65px;
             height: 65px;
             font-size: 28px;
             cursor: pointer;
@@ -64,7 +63,6 @@
             justify-content: center;
             -webkit-tap-highlight-color: transparent;
         }
-
         #fortune-bubble {
             background: white;
             color: #333;
@@ -72,10 +70,10 @@
             border-radius: 12px;
             margin-top: 10px;
             width: 200px;
-            max-width: 75vw; /* 確保手機螢幕放得下 */
+            max-width: 75vw;
             font-size: 1rem;
             box-shadow: 0 8px 20px rgba(0,0,0,0.3);
-            display: none; /* 平時隱藏 */
+            display: none;
             position: absolute;
             right: 0;
             line-height: 1.5;
@@ -88,13 +86,8 @@
             margin: 10px 0 20px 0;
             border: 1px dashed #fff;
             font-size: 1rem;
-            color: #ffeb3b; /* 亮黃色粉筆感 */
+            color: #ffeb3b;
             text-align: center;
-        }
-
-        #timer-text {
-            font-weight: bold;
-            letter-spacing: 1px;
         }
         #sticker-wall {
             display: grid;
@@ -113,13 +106,12 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
+            position: relative;
         }
-        /* 管理模式下的貼紙樣式 */
         .admin-mode .sticker {
-            border: 2px dashed #f1c40f !important; /* 虛線外框 */
+            border: 2px dashed #f1c40f !important;
             cursor: move;
         }
-        
         .delete-btn {
             position: absolute;
             top: -10px;
@@ -130,12 +122,10 @@
             width: 25px;
             height: 25px;
             border: none;
-            display: none; /* 平時隱藏 */
+            display: none;
+            z-index: 10;
         }
-        
-        .admin-mode .delete-btn {
-            display: block; /* 管理模式下顯示 */
-        }
+        .admin-mode .delete-btn { display: block; }
         .sticker:nth-child(even) { transform: rotate(1deg); }
         .content { font-size: 1.1rem; line-height: 1.5; word-break: break-all; }
         .date {
@@ -151,15 +141,15 @@
             position: fixed;
             top: 0; left: 0;
             width: 100%; height: 100%;
-            background: rgba(0, 0, 0, 0.6); /* 半透明黑底 */
-            backdrop-filter: blur(10px);    /* 磨砂玻璃模糊 */
-            display: none;                /* 預設隱藏 */
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(10px);
+            display: none;
             justify-content: center;
             align-items: center;
             z-index: 5000;
         }
         .ai-modal {
-            background: rgba(255, 255, 255, 0.15); 
+            background: rgba(255, 255, 255, 0.15);
             border: 1px solid rgba(255, 255, 255, 0.3);
             padding: 30px;
             border-radius: 20px;
@@ -203,11 +193,10 @@
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 
     <script>
-        // 這裡已經填入你截圖中的 dino-sticker 金鑰
         const firebaseConfig = {
             apiKey: "AIzaSyBiR6cspX-7kF7_OXsAX672kuOf-SnQB-0",
             authDomain: "dinosticker-c93c6.firebaseapp.com",
-            databaseURL: "https://dinosticker-c93c6-default-rtdb.firebaseio.com/", // 手動補上資料庫網址
+            databaseURL: "https://dinosticker-c93c6-default-rtdb.firebaseio.com/",
             projectId: "dinosticker-c93c6",
             storageBucket: "dinosticker-c93c6.firebasestorage.app",
             messagingSenderId: "959711028780",
@@ -218,12 +207,16 @@
         const database = firebase.database();
         const colors = ['#fff9c4', '#ffcdd2', '#f8bbd0', '#e1f5fe', '#d1c4e9', '#c8e6c9', '#ffe0b2'];
 
-        // 💡 請在這裡填入你申請到的 API Key
-        const GEMINI_API_KEY = "00"; 
-        
-        // 💡 這裡是跟 AI 連線的函式
+        // AI 金鑰動態抓取邏輯
+        let SYSTEM_AI_KEY = "";
+        database.ref('aiConfig/key').on('value', (snapshot) => {
+            SYSTEM_AI_KEY = snapshot.val();
+            console.log("AI 系統已透過資料庫就緒");
+        });
+
         async function askAI(userText) {
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`;
+            if (!SYSTEM_AI_KEY) return "（AI 仍在啟動中，請稍候...）";
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${SYSTEM_AI_KEY}`;
             try {
                 const response = await fetch(url, {
                     method: "POST",
@@ -236,8 +229,7 @@
                 return data.candidates[0].content.parts[0].text;
             } catch (e) { return "（AI 目前訊號微弱...🦖）"; }
         }
-        
-        // 💡 控制 AI 視窗開關的函式
+
         function openAI(msg) {
             document.getElementById('ai-content').innerText = msg;
             document.getElementById('ai-overlay').style.display = 'flex';
@@ -245,176 +237,104 @@
         function closeAI() {
             document.getElementById('ai-overlay').style.display = 'none';
         }
-        
-        // 💡 修改後的發布功能
+
         async function postSticker() {
             const text = document.getElementById('noteText').value;
             if (text.trim() === "") return alert("內容不能為空");
-        
-            // 1. 存入 Firebase (原本的邏輯)
+
             const timestamp = new Date().toLocaleString('zh-TW');
+            const randomColor = colors[Math.floor(Math.random() * colors.length)];
+
+            // 1. 存入 Firebase
             database.ref('stickers').push({
                 content: text,
                 date: timestamp,
-                color: colors[Math.floor(Math.random() * colors.length)]
+                color: randomColor
             });
             document.getElementById('noteText').value = ""; 
-        
-            // 2. 💡 觸發 AI 視窗
+
+            // 2. 觸發 AI 視窗
             openAI("讓我想想怎麼回你..."); 
             const aiResponse = await askAI(text);
             document.getElementById('ai-content').innerText = aiResponse;
         }
 
-        const timestamp = new Date().toLocaleString('zh-TW');
-    
-        // *** 新增：在發布時就先抽好顏色 ***
-        const randomColor = colors[Math.floor(Math.random() * colors.length)];
-    
-        // *** 修改：將 color 一併推送到資料庫 ***
-        database.ref('stickers').push({
-            content: text,
-            date: timestamp,
-            color: randomColor // 把顏色存起來
-          });
-
-        document.getElementById('noteText').value = ""; 
-        }
-        function deleteSticker(id) {
-            if (!isAdmin) return; // 安全檢查：非管理員不能刪
-            if (confirm("確定要刪除這條學校紀錄嗎？")) {
-                // 直接從 Firebase 資料庫移除該 ID 的資料
-                database.ref('stickers/' + id).remove()
-                    .then(() => { alert("已刪除"); })
-                    .catch((error) => { console.error("刪除失敗:", error); });
-            }
-        }
-
-        // 監聽資料庫變化並顯示貼紙（隨機顏色版）
-        database.ref('stickers').on('value', (snapshot) => {
-            const wall = document.getElementById('sticker-wall');
-            wall.innerHTML = ""; 
-        
-            const data = snapshot.val();
-            if (data) {
-                // 💡 關鍵：改用 Object.keys 遍歷，這樣才能同時拿到 ID (key) 和 內容 (value)
-                const keys = Object.keys(data).reverse(); 
-        
-                keys.forEach(id => {
-                    const item = data[id];
-                    const div = document.createElement('div');
-                    div.className = 'sticker';
-                    
-                    // 💡 核心邏輯：檢查內容是否以 ! 開頭
-                    const isManager = item.content.startsWith('!');
-                    const cleanContent = isManager ? item.content.substring(1) : item.content;
-                
-                    if (isManager) {
-                        // --- 管理者專屬樣式 ---
-                        div.style.backgroundColor = '#2c3e50'; 
-                        div.style.color = '#ecf0f1';           
-                        div.style.border = '2px solid #f1c40f'; 
-                        div.style.boxShadow = '0 0 10px rgba(241, 196, 15, 0.5)';
-                        div.style.fontWeight = 'bold';
-                    } else {
-                        // --- 普通同學樣式 ---
-                        div.style.backgroundColor = item.color || '#fff9c4';
-                        div.style.color = '#333';
-                        div.style.border = 'none';
-                    }
-                
-                    // 💡 重點：將 id 傳入 deleteSticker 函式
-                    div.innerHTML = `
-                        <button class="delete-btn" onclick="event.stopPropagation(); deleteSticker('${id}')">×</button>
-                        ${isManager ? '<span style="font-size:0.7rem; color:#f1c40f; display:block; margin-bottom:5px;">📌 管理者公告</span>' : ''}
-                        <div class="content">${cleanContent}</div>
-                        <div class="date">${item.date}</div>
-                    `;
-                    
-                    wall.appendChild(div);
-                });
-            }
-        });
-
+        // 管理員邏輯
         let isAdmin = false;
-        
         function checkAdmin() {
             if (!isAdmin) {
                 const password = prompt("請輸入管理者密碼：");
-                if (password === "asas1212") { // <--- 這裡設定你的專屬密碼
+                if (password === "asas1212") {
                     isAdmin = true;
                     document.body.classList.add('admin-mode');
                     document.getElementById('admin-btn').innerText = "🔓 已授權";
                     document.getElementById('admin-btn').style.backgroundColor = "#27ae60";
-                    alert("管理模式已啟動，現在可以刪除貼紙了。");
-                } else {
-                    alert("密碼錯誤！");
-                }
+                    alert("管理模式已啟動");
+                } else { alert("密碼錯誤！"); }
             } else {
-                // 如果已經是管理員，再點一次就退出模式
                 isAdmin = false;
                 document.body.classList.remove('admin-mode');
                 document.getElementById('admin-btn').innerText = "🔒 管理";
                 document.getElementById('admin-btn').style.backgroundColor = "rgba(0,0,0,0.5)";
             }
         }
-        
-        // 刪除貼紙的函數 (確保使用傳入的 id)
+
         function deleteSticker(id) {
             if (!isAdmin) return;
             if (confirm("確定要刪除這張紀錄嗎？")) {
-                // 指向正確的節點進行移除
-                database.ref('stickers/' + id).remove()
-                    .then(() => {
-                        // 刪除後 Firebase 會自動觸發上面的 on('value')，畫面會立刻更新
-                        console.log("刪除成功");
-                    })
-                    .catch((error) => {
-                        alert("刪除失敗：" + error.message);
-                    });
+                database.ref('stickers/' + id).remove();
             }
         }
-        // 定義倒數目標 (名稱, 日期)
-        const targets = [
-            { name: "兒童節補假", date: "2026-04-03T00:00:00" },
-            { name: "清明節補假", date: "2026-04-06T00:00:00" },
-            { name: "期中考週", date: "2026-04-20T00:00:00" },
-            { name: "勞動節放假", date: "2026-05-01T00:00:00" },
-            { name: "端午節放假", date: "2026-06-19T00:00:00" },
-            { name: "期末考週", date: "2026-06-22T00:00:00" },
-        ];
 
+        // 監聽並渲染牆面
+        database.ref('stickers').on('value', (snapshot) => {
+            const wall = document.getElementById('sticker-wall');
+            wall.innerHTML = ""; 
+            const data = snapshot.val();
+            if (data) {
+                const keys = Object.keys(data).reverse(); 
+                keys.forEach(id => {
+                    const item = data[id];
+                    const div = document.createElement('div');
+                    div.className = 'sticker';
+                    const isManager = item.content.startsWith('!');
+                    const cleanContent = isManager ? item.content.substring(1) : item.content;
+                    
+                    div.style.backgroundColor = isManager ? '#2c3e50' : (item.color || '#fff9c4');
+                    div.style.color = isManager ? '#ecf0f1' : '#333';
+                    if(isManager) div.style.border = '2px solid #f1c40f';
+
+                    div.innerHTML = `
+                        <button class="delete-btn" onclick="event.stopPropagation(); deleteSticker('${id}')">×</button>
+                        ${isManager ? '<span style="font-size:0.7rem; color:#f1c40f; display:block; margin-bottom:5px;">📌 管理者公告</span>' : ''}
+                        <div class="content">${cleanContent}</div>
+                        <div class="date">${item.date}</div>
+                    `;
+                    wall.appendChild(div);
+                });
+            }
+        });
+
+        // 倒數計時與占卜
+        const targets = [
+            { name: "期中考週", date: "2026-04-20T00:00:00" },
+            { name: "期末考週", date: "2026-06-22T00:00:00" }
+        ];
         function updateCountdown() {
             const now = new Date().getTime();
-            let displayText = "";
-
-            // 這裡我們取最近的一個目標來顯示，或是你可以改成輪播
             const nextTarget = targets.find(t => new Date(t.date).getTime() > now);
-
             if (nextTarget) {
-                const targetTime = new Date(nextTarget.date).getTime();
-                const diff = targetTime - now;
-
+                const diff = new Date(nextTarget.date).getTime() - now;
                 const days = Math.floor(diff / (1000 * 60 * 60 * 24));
                 const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                const secs = Math.floor((diff % (1000 * 60)) / 1000);
-
-        displayText = `離 ${nextTarget.name} 還有：${days}天 ${hours}時 ${mins}分 ${secs}秒`;
-            } else {
-            displayText = "目前沒有設定中的倒數目標！";
+                document.getElementById('timer-text').innerText = `離 ${nextTarget.name} 還有：${days}天 ${hours}時`;
             }
-
-        document.getElementById('timer-text').innerText = displayText;
-        }    
-
-        // 每秒更新一次
+        }
         setInterval(updateCountdown, 1000);
-        updateCountdown(); // 初始執行一次
-        
+        updateCountdown();
+
         function dinoFortune() {
-        const fortunes = [
-"是的。",
+            const fortunes = ["是的。",
 "不是現在。",
 "再等等。",
 "當然。",
@@ -714,30 +634,15 @@
 "這是好兆頭。",
 "重新出發。",
 "一切皆有可能。"
-        ];
-
-        const bubble = document.getElementById('fortune-bubble');
-    
-        // 如果裝置支援震動（手機專屬儀式感）
-        if (navigator.vibrate) {
-            navigator.vibrate(50); 
-        }
-
-        // 先顯示感應中，強迫使用者停留
-        bubble.style.display = 'block';
-        bubble.innerHTML = "🔮 <strong>讓我想想...</strong><br>請在心中默念你的問題";
-
-        // 1.5 秒後才顯示結果，增加「占卜感」
-        setTimeout(() => {
-            const randomIndex = Math.floor(Math.random() * fortunes.length);
-            bubble.innerHTML = "<strong>🦖 Dino:：</strong><br>" + fortunes[randomIndex];
-        
-            // 5秒後自動消失
+];
+            const bubble = document.getElementById('fortune-bubble');
+            bubble.style.display = 'block';
+            bubble.innerHTML = "🔮 <strong>讓我想想...</strong>";
             setTimeout(() => {
-                bubble.style.display = 'none';
-            }, 3000);
-        }, 1500); 
-    }
+                bubble.innerHTML = "<strong>🦖 Dino：</strong><br>" + fortunes[Math.floor(Math.random() * fortunes.length)];
+                setTimeout(() => { bubble.style.display = 'none'; }, 3000);
+            }, 1500);
+        }
     </script>
     
     <div id="ai-overlay">
