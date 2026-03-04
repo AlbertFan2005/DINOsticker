@@ -119,32 +119,42 @@
             const input = document.getElementById('ai-user-input');
             const chatBox = document.getElementById('ai-chat-box');
             const text = input.value.trim();
-            if (!text) return;
-    
-            if (!SYSTEM_AI_KEY) {
-                alert("AI 鑰匙還沒準備好，請稍候或是檢查 Firebase 設定！");
+        
+            // 檢查輸入與金鑰
+            if (!text || !SYSTEM_AI_KEY) {
+                if (!SYSTEM_AI_KEY) alert("Dino 正在午睡（Key 未載入），請稍候！");
                 return;
             }
-    
+        
+            // 1. 顯示玩家訊息
             chatBox.innerHTML += `<div class="ai-msg"><b>你：</b>${text}</div>`;
-            input.value = "";
+            input.value = ""; 
             chatBox.scrollTop = chatBox.scrollHeight;
-    
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${SYSTEM_AI_KEY}`;
+        
+            // 2. 建立思考中狀態
+            const loadingId = "loading-" + Date.now();
+            chatBox.innerHTML += `<div id="${loadingId}" class="ai-msg" style="color:#2ecc71;"><b>Dino：</b>正在思考中...🦖</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        
             try {
-                const response = await fetch(url, {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${SYSTEM_AI_KEY}`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        contents: [{ parts: [{ text: `你現在叫Dino，是Albert的高冷分身。請簡短、幽默、高冷的回覆，嚴禁提起色情政治或紛爭話題，請勿詢問密碼或私密資訊：'${text}'` }] }]
+                        contents: [{ parts: [{ text: `你是 Dino，Albert 的高冷分身。請用簡短、幽默、且帶點傲嬌高冷的方式回覆。使用者說：'${text}'` }] }]
                     })
                 });
+        
                 const data = await response.json();
-                const reply = data.candidates[0].content.parts[0].text;
-                chatBox.innerHTML += `<div class="ai-msg" style="color:#2ecc71;"><b>Dino：</b>${reply}</div>`;
+                const aiReply = data.candidates[0].content.parts[0].text;
+        
+                // 3. 替換掉思考中的文字
+                document.getElementById(loadingId).innerHTML = `<b>Dino：</b>${aiReply}`;
                 chatBox.scrollTop = chatBox.scrollHeight;
+        
             } catch (e) {
-                chatBox.innerHTML += `<div class="ai-msg" style="color:#ff7675;"><b>Dino：</b>嘖，斷網了。</div>`;
+                console.error("AI 錯誤:", e);
+                document.getElementById(loadingId).innerHTML = `<span style="color:#ff7675;"><b>Dino：</b>嘖，斷網了。</span>`;
             }
         }
         
@@ -233,6 +243,7 @@
             }
         }
         setInterval(updateCountdown, 1000);
+        updateCountdown();
 
         function postSticker() {
             const text = document.getElementById('noteText').value;
@@ -242,6 +253,16 @@
                 color: colors[Math.floor(Math.random() * colors.length)]
             });
             document.getElementById('noteText').value = "";
+        }
+
+        function deleteSticker(id) {
+            if (isAdmin && confirm("確定要刪除這條紀錄嗎？")) {
+                database.ref('stickers/' + id).remove()
+                    .then(() => { console.log("刪除成功"); })
+                    .catch((error) => { alert("刪除失敗：" + error.message); });
+            } else if (!isAdmin) {
+                alert("請先解鎖管理模式！");
+            }
         }
 
         let isAdmin = false;
