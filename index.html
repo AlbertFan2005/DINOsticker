@@ -190,9 +190,6 @@
             overlay.style.display = isVisible ? 'none' : 'flex';
             
             if (!isVisible) {
-                // 開啟時，先檢查有沒有 Key
-                if (!SYSTEM_AI_KEY) {
-                    chatBox.innerHTML = '<div style="color:#ff7675;">等等... 我還沒拿到鑰匙 (Firebase 載入中)，請稍後再開。</div>';
                 } else {
                     chatBox.innerHTML = '<div style="color:#ff7675;">對話將不被保留，重要資訊請另存，你想說什麼？</div>';
                 }
