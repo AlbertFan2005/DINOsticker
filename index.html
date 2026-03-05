@@ -202,10 +202,14 @@
         }
 
         async function sendToAI() {
+            const sendBtn = document.querySelector('.ai-send-btn');
             const input = document.getElementById('ai-user-input');
             const chatBox = document.getElementById('ai-chat-box');
             const text = input.value.trim();
-        
+
+            if (sendBtn.disabled) return;
+            sendBtn.disabled = true;
+            sendBtn.innerText = "講太快了啦";
             // 檢查 Key 是否真的有從 Firebase 抓到
             if (!text || !SYSTEM_AI_KEY) {
                 if (!SYSTEM_AI_KEY) alert("鑰匙尚未就緒（Firebase 未載入）！");
@@ -224,7 +228,7 @@
         
             try {
                 // 修正 URL 與 Body 的語法
-                const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-flash-lite:generateContent?key=${SYSTEM_AI_KEY.trim()}`, {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.0-flash-lite-001:generateContent?key=${SYSTEM_AI_KEY.trim()}`, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
@@ -250,8 +254,23 @@
                     userAgent: navigator.userAgent     // (選填) 紀錄對方是用什麼設備/瀏覽器，方便抓亂搞的人
                 });
                 document.getElementById(loadingId).innerHTML = `<b>Dino：</b>${aiReply}`;
+                let timer = 8;
+                const interval = setInterval(() => {
+                    timer--;
+                    sendBtn.innerText = '等 ${timer}s';
+                    if (timer <= 0) {
+                        clearInterval(interval);
+                        sendBtn.disabled = false;
+                        sendBtn.innerText = "傳送";
+                    }
+                }, 1000);
                 
             } catch (e) {
+                console.error(e);
+                setTimeout(() => {
+                    sendBtn.disabled = false;
+                    sendBtn.innerText = "重試";
+                }, 5000)
                 // 錯誤發生時，顯示具體原因
                 document.getElementById(loadingId).innerHTML = `<span style="color:#ff7675;"><b>Dino：</b>嘖，出事了：${e.message}</span>`;
             }
