@@ -190,10 +190,10 @@
             overlay.style.display = isVisible ? 'none' : 'flex';
             
             if (!isVisible) {
-                } else {
-                    chatBox.innerHTML = '<div style="color:#ff7675;">對話將不被保留，重要資訊請另存，你想說什麼？</div>';
-                }
+                // 當開啟對話框時，直接顯示歡迎詞，不再檢查 Firebase 的 Key
+                chatBox.innerHTML = '<div style="color:#ff7675;">對話將不被保留，重要資訊請另存，你想說什麼？</div>';
             } else {
+                // 關閉時清空內容
                 chatBox.innerHTML = ""; 
             }
         }
