@@ -236,12 +236,20 @@
                 document.getElementById(loadingId).innerHTML = `<b>Dino：</b>${aiReply}`;
         
                 // 4. 存入 Firebase 紀錄
-                if (window.database) {
+               if (window.database) {
+                    console.log("正在嘗試寫入紀錄到 Firebase..."); // 💡 除錯用
                     database.ref('ai_logs').push({
                         user: text,
                         dino: aiReply,
                         time: new Date().toLocaleString('zh-TW'),
-                        api: "NodeJS-Local"
+                        api: "Vercel-Cloud" // 💡 標記為雲端版本
+                    })
+                    .then(() => {
+                        console.log("✅ 成功更新 ai_logs 紀錄！");
+                    })
+                    .catch((err) => {
+                        console.error("❌ 寫入失敗，原因：", err.message);
+                        // 如果噴出 Permission Denied，請檢查 Firebase Rules 和 Authorized domains
                     });
                 }
         
