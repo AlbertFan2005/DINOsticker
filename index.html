@@ -202,32 +202,72 @@
         }
 
         async function sendToAI() {
-            // ... 前段取得 text 的邏輯不變 ...
+            // 1. 抓取 HTML 元素
+            const sendBtn = document.getElementById('ai-send-btn'); 
+            const input = document.getElementById('ai-user-input');
+            const chatBox = document.getElementById('ai-chat-box');
+            const text = input.value.trim();
+        
+            // 2. 檢查狀態 (暫時移除 !SYSTEM_AI_KEY 檢查以確保連線到 Node.js 成功)
+            if (!sendBtn || sendBtn.disabled || !text) return;
+        
+            // 啟動冷卻鎖定
+            sendBtn.disabled = true;
+            sendBtn.innerText = "Dino 思考中...";
+        
+            // 3. 更新對話畫面 (這段一定要有，否則後面會出錯)
+            chatBox.innerHTML += `<div class="ai-msg"><b>你：</b>${text}</div>`;
+            input.value = "";
+            const loadingId = "loading-" + Date.now();
+            chatBox.innerHTML += `<div id="${loadingId}" class="ai-msg"><b>Dino：</b>🦖 ...</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
+        
             try {
-                // 💡 網址改連向你現在電腦跑起來的 3000 埠口
+                // 💡 網址改連向你現在電腦跑起來的本機伺服器
                 const url = "http://localhost:3000/api/dino";
                 
                 const response = await fetch(url, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ message: text }) // 💡 Node 版後端接收 message 欄位
+                    body: JSON.stringify({ message: text }) // Node 版接收 message 欄位
                 });
         
                 const data = await response.json();
-                const aiReply = data.reply; // 💡 取得後端傳回的 reply 內容
+                const aiReply = data.reply; // 取得後端傳回的內容
                 
-                // 顯示回覆並存入 Firebase
+                // 顯示回覆
                 document.getElementById(loadingId).innerHTML = `<b>Dino：</b>${aiReply}`;
-                database.ref('ai_logs').push({
-                    user: text,
-                    dino: aiReply,
-                    time: new Date().toLocaleString('zh-TW')
-                });
+        
+                // 4. 存入 Firebase 紀錄
+                if (window.database) {
+                    database.ref('ai_logs').push({
+                        user: text,
+                        dino: aiReply,
+                        time: new Date().toLocaleString('zh-TW'),
+                        api: "NodeJS-Local"
+                    });
+                }
         
             } catch (e) {
-                document.getElementById(loadingId).innerHTML = `<span style="color:red;">連線失敗：${e.message}</span>`;
+                // 如果報錯，把錯誤顯示在對話框中
+                if(document.getElementById(loadingId)) {
+                    document.getElementById(loadingId).innerHTML = `<span style="color:red;">連線失敗：${e.message}</span>`;
+                }
+                console.error("AI 傳送錯誤:", e);
+            } finally {
+                // 5. 無論成功失敗，8 秒後恢復按鈕功能
+                let timer = 8;
+                const interval = setInterval(() => {
+                    timer--;
+                    sendBtn.innerText = `等 ${timer}s`;
+                    if (timer <= 0) {
+                        clearInterval(interval);
+                        sendBtn.disabled = false;
+                        sendBtn.innerText = "傳送";
+                    }
+                }, 1000);
             }
-            // ... 後段 8 秒冷卻邏輯保持不變 ...
+            chatBox.scrollTop = chatBox.scrollHeight;
         }
 
         // --- 占卜功能 (保留 100+ 回覆) ---
