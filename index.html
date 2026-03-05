@@ -202,7 +202,7 @@
         }
 
         async function sendToAI() {
-            const sendBtn = document.querySelector('ai-send-btn');
+            const sendBtn = document.getElementById('ai-send-btn');
             const input = document.getElementById('ai-user-input');
             const chatBox = document.getElementById('ai-chat-box');
             const text = input.value.trim();
@@ -418,7 +418,7 @@
             <div id="ai-chat-box" class="ai-chat-box"></div>
             <div class="ai-input-area">
                 <input type="text" id="ai-user-input" class="ai-input" placeholder="你請說..." onkeypress="if(event.key==='Enter') sendToAI()">
-                <button onclick="sendToAI()">傳送</button>
+                <button id="ai-send-btn" onclick="sendToAI()">傳送</button>
             </div>
         </div>
     </div>
