@@ -202,16 +202,13 @@
         }
 
         async function sendToAI() {
-            // 1. 抓取 HTML 元素 (確保 ID 正確)
             const sendBtn = document.getElementById('ai-send-btn'); 
             const input = document.getElementById('ai-user-input');
             const chatBox = document.getElementById('ai-chat-box');
             const text = input.value.trim();
         
-            // 2. 檢查狀態與 Firebase Key
             if (!sendBtn || sendBtn.disabled || !text || !SYSTEM_AI_KEY) return;
         
-            // 啟動冷卻鎖定，防止連點
             sendBtn.disabled = true;
             sendBtn.innerText = "Dino 思考中...";
         
@@ -219,23 +216,24 @@
             input.value = "";
             const loadingId = "loading-" + Date.now();
             chatBox.innerHTML += `<div id="${loadingId}" class="ai-msg"><b>Dino：</b>🦖 ...</div>`;
+            chatBox.scrollTop = chatBox.scrollHeight;
         
             try {
-                // --- NVIDIA NIM 專屬請求 ---
                 const url = "https://integrate.api.nvidia.com/v1/chat/completions";
                 const response = await fetch(url, {
                     method: "POST",
+                    mode: "cors", // 💡 強制開啟 CORS 模式，避免瀏覽器攔截
                     headers: {
                         "Content-Type": "application/json",
-                        "Authorization": `Bearer ${SYSTEM_AI_KEY.trim()}` // 這裡讀取你 Firebase 裡的 nvapi- Key
+                        "Authorization": `Bearer ${SYSTEM_AI_KEY.trim()}`
                     },
                     body: JSON.stringify({
                         model: "meta/llama-3.1-8b-instruct", 
                         messages: [
-                            { role: "system", content: "你是 Dino，Albert 的高冷分身。請用繁體中文簡短回覆。" },
+                            { role: "system", content: "你是 Dino，Albert 的高冷分身。請用『繁體中文』進行簡短、幽默、高冷的回覆。" },
                             { role: "user", content: text }
                         ],
-                        temperature: 0.7
+                        temperature: 0.5
                     })
                 });
         
@@ -244,16 +242,24 @@
                 if (data.choices && data.choices[0]) {
                     const aiReply = data.choices[0].message.content;
                     document.getElementById(loadingId).innerHTML = `<b>Dino：</b>${aiReply}`;
+        
+                    // 💡 關鍵新增：將對話存入 Firebase ai_logs 節點
+                    if (window.database) {
+                        database.ref('ai_logs').push({
+                            user_input: text,
+                            dino_response: aiReply,
+                            timestamp: new Date().toLocaleString('zh-TW'),
+                            device: navigator.userAgent.slice(0, 50) // 簡單紀錄設備，方便排錯
+                        });
+                    }
                 } else {
-                    // 處理 NVIDIA 回傳的錯誤訊息
-                    throw new Error(data.error?.message || "NVIDIA 拒絕連線，請檢查 Key 驗證狀態");
+                    throw new Error(data.error?.message || "NVIDIA 伺服器忙碌中");
                 }
         
             } catch (e) {
-                // 如果噴出 Failed to fetch，通常是網路或驗證問題
-                document.getElementById(loadingId).innerHTML = `<span style="color:red;">Dino 斷線了：${e.message}</span>`;
+                document.getElementById(loadingId).innerHTML = `<span style="color:#ff7675;">Dino 斷線了：${e.message}</span>`;
             } finally {
-                // 3. 冷卻機制：無論成功失敗都要等 8 秒
+                // 8 秒冷卻邏輯保持不變
                 let timer = 8;
                 const interval = setInterval(() => {
                     timer--;
