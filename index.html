@@ -234,6 +234,11 @@
                 
                 // 顯示回覆
                 document.getElementById(loadingId).innerHTML = `<b>Dino：</b>${aiReply}`;
+
+                console.log("檢查 Firebase 狀態...", { 
+                    hasDatabase: !!window.database, 
+                    dbObject: window.database 
+                });
         
                 // 4. 存入 Firebase 紀錄
                if (window.database) {
