@@ -170,6 +170,11 @@
             messagingSenderId: "959711028780",
             appId: "1:959711028780:web:899b320dcd1cda03b21389"
         };
+
+        if (!firebase.apps.length) {
+              firebase.initializeApp(firebaseConfig);
+          }
+          window.database = firebase.database();
         
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
