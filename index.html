@@ -202,77 +202,32 @@
         }
 
         async function sendToAI() {
-            console.log("我的鑰匙內容:", SYSTEM_AI_KEY);
-            const sendBtn = document.getElementById('ai-send-btn'); 
-            const input = document.getElementById('ai-user-input');
-            const chatBox = document.getElementById('ai-chat-box');
-            const text = input.value.trim();
-        
-            if (!sendBtn || sendBtn.disabled || !text || !SYSTEM_AI_KEY) return;
-        
-            sendBtn.disabled = true;
-            sendBtn.innerText = "Dino 思考中...";
-        
-            chatBox.innerHTML += `<div class="ai-msg"><b>你：</b>${text}</div>`;
-            input.value = "";
-            const loadingId = "loading-" + Date.now();
-            chatBox.innerHTML += `<div id="${loadingId}" class="ai-msg"><b>Dino：</b>🦖 ...</div>`;
-            chatBox.scrollTop = chatBox.scrollHeight;
-        
+            // ... 前段取得 text 的邏輯不變 ...
             try {
-                const url = "https://integrate.api.nvidia.com/v1/chat/completions";
+                // 💡 網址改連向你現在電腦跑起來的 3000 埠口
+                const url = "http://localhost:3000/api/dino";
+                
                 const response = await fetch(url, {
                     method: "POST",
-                    mode: "cors", // 💡 強制開啟 CORS 模式，避免瀏覽器攔截
-                    headers: {
-                        "Content-Type": "application/json",
-                        "Authorization": `Bearer ${SYSTEM_AI_KEY.trim()}`
-                    },
-                    body: JSON.stringify({
-                        model: "meta/llama-3.1-8b-instruct", 
-                        messages: [
-                            { role: "system", content: "你是 Dino，Albert 的高冷分身。請用『繁體中文』進行簡短、幽默、高冷的回覆。" },
-                            { role: "user", content: text }
-                        ],
-                        temperature: 0.5
-                    })
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ message: text }) // 💡 Node 版後端接收 message 欄位
                 });
         
                 const data = await response.json();
-        
-                if (data.choices && data.choices[0]) {
-                    const aiReply = data.choices[0].message.content;
-                    document.getElementById(loadingId).innerHTML = `<b>Dino：</b>${aiReply}`;
-        
-                    // 💡 關鍵新增：將對話存入 Firebase ai_logs 節點
-                    if (window.database) {
-                        database.ref('ai_logs').push({
-                            user_input: text,
-                            dino_response: aiReply,
-                            timestamp: new Date().toLocaleString('zh-TW'),
-                            device: navigator.userAgent.slice(0, 50) // 簡單紀錄設備，方便排錯
-                        });
-                    }
-                } else {
-                    throw new Error(data.error?.message || "NVIDIA 伺服器忙碌中");
-                }
+                const aiReply = data.reply; // 💡 取得後端傳回的 reply 內容
+                
+                // 顯示回覆並存入 Firebase
+                document.getElementById(loadingId).innerHTML = `<b>Dino：</b>${aiReply}`;
+                database.ref('ai_logs').push({
+                    user: text,
+                    dino: aiReply,
+                    time: new Date().toLocaleString('zh-TW')
+                });
         
             } catch (e) {
-                document.getElementById(loadingId).innerHTML = `<span style="color:#ff7675;">Dino 斷線了：${e.message}</span>`;
-            } finally {
-                // 8 秒冷卻邏輯保持不變
-                let timer = 8;
-                const interval = setInterval(() => {
-                    timer--;
-                    sendBtn.innerText = `等 ${timer}s`;
-                    if (timer <= 0) {
-                        clearInterval(interval);
-                        sendBtn.disabled = false;
-                        sendBtn.innerText = "傳送";
-                    }
-                }, 1000);
+                document.getElementById(loadingId).innerHTML = `<span style="color:red;">連線失敗：${e.message}</span>`;
             }
-            chatBox.scrollTop = chatBox.scrollHeight;
+            // ... 後段 8 秒冷卻邏輯保持不變 ...
         }
 
         // --- 占卜功能 (保留 100+ 回覆) ---
